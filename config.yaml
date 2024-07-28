@@ -1,0 +1,71 @@
+# needs to be updated with lots of parameters
+# Training parameters
+training:
+  batch_size: 32
+  learning_rate: 3e-4
+  epochs: 50
+
+# Model parameters
+model:
+  conformer: # 8402688 parameter conformer
+    input_dim : 128
+    depth : 12
+    dim_head : 64
+    heads : 8
+    ff_mult : 4
+    conv_expansion_factor : 2
+    conv_kernel_size : 31
+    attn_dropout : 0.
+    ff_dropout : 0.
+    conv_dropout : 0.
+  output_size: 10 # num_vocab
+  activation_output: softmax
+  use_sim_cse_kbert : False
+  text_decoder :
+    type : xlstm # if the type is different we will not use the xlstm config
+    mlstm_block:
+      mlstm:
+        conv1d_kernel_size: 4
+        qkv_proj_blocksize: 4
+        num_heads: 4
+    slstm_block:
+      slstm:
+        backend: cuda
+        num_heads: 4
+        conv1d_kernel_size: 4
+        bias_init: powerlaw_blockdependent
+      feedforward:
+        proj_factor: 1.3
+        act_fn: gelu
+    context_length: 256
+    num_blocks: 7
+    embedding_dim: 128
+    slstm_at: [1]
+    tembedding_dim : 768
+    hidden_dim : 192 
+    num_layers : 1
+    dropout : 0.1
+    bidirectional : False
+    d_model : 768
+    nhead : 4
+    dim_ff : 768
+    tembedding_dim : 768
+
+
+# Optimizer parameters
+optimizer:
+  type: AdamW
+  weight_decay: 1e-4
+
+# Data parameters
+data:
+  train_data_path: 'data/train.csv'
+  val_data_path: 'data/val.csv'
+  test_data_path: 'data/test.csv'
+
+# Logging parameters
+logging:
+  log_dir: '/content/logs/'
+
+# Other parameters
+seed: 42
