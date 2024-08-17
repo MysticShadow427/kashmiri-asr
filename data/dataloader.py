@@ -22,7 +22,7 @@ class kashmirDataset(Dataset):
         text = self.dataframe.iloc[idx]['filename_segment']
         audio_file_path = self.dataframe.iloc[idx]['path']
  
-        waveform, _ =self.waveform
+        waveform, _ = torchaudio.load(audio_file_path)
         waveform = self.cut_if_necessary(waveform)
         waveform = self.right_pad_if_necessary(waveform)
         waveform = waveform.unsqueeze(1)
@@ -32,15 +32,20 @@ class kashmirDataset(Dataset):
         
         waveform = waveform.squeeze(1)
 
-        # Tokenize the text
+  
         tokens = self.tokenizer(text, padding='max_length', truncation=True, max_length=self.max_length_tokens, return_tensors='pt')
+        input_ids = tokens['input_ids'].squeeze()
         attention_mask = tokens['attention_mask'].squeeze()
 
-        # Create dictionary to store the outputs
+
+        target_ids = self.create_target_tokens(input_ids)
+
+ 
         data = {
-            'input_tokens': tokens['input_ids'].squeeze(),
+            'input_tokens': input_ids,
             'speech_features': waveform,
-            'attentionmask': attention_mask
+            'attentionmask': attention_mask,
+            'target_tokens': target_ids
         }
         
         return data
@@ -57,16 +62,27 @@ class kashmirDataset(Dataset):
             waveform = torch.nn.functional.pad(waveform, pad_last_dim)
         return waveform
 
+    def create_target_tokens(self, input_ids):
+
+        eos_token_id = self.tokenizer.eos_token_id or self.tokenizer.sep_token_id  
+        target_ids = input_ids[1:]  
+        target_ids = torch.cat([target_ids, torch.tensor([eos_token_id])], dim=0) 
+        if len(target_ids) > self.max_length_tokens:
+            target_ids = target_ids[:self.max_length_tokens]
+        return target_ids
+
 def collate_fn(batch):
 
     input_tokens = torch.stack([item['input_tokens'] for item in batch])
     speech_features = torch.stack([item['speech_features'] for item in batch])
     attentionmask = torch.stack([item['attentionmask'] for item in batch])
+    target_tokens = torch.stack([item['target_tokens'] for item in batch])
+    
     data = {
         'input_tokens': input_tokens,
         'speech_features': speech_features,
-        'attentionmask': attentionmask
+        'attentionmask': attentionmask,
+        'target_tokens': target_tokens
     }
     
     return data
-
